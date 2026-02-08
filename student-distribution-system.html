@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام توزيع الطلبة - النسخة النهائية الكاملة</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- مكتبات PDFMake -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --bg-primary: #ffffff; --bg-secondary: #f8f9fa; --bg-tertiary: #e9ecef; --bg-card: #ffffff; --bg-overlay: rgba(0, 0, 0, 0.05);
+            --text-primary: #2d3748; --text-secondary: #718096; --text-tertiary: #a0aec0; --text-inverse: #ffffff;
+            --border-color: #e2e8f0; --border-hover: #cbd5e0;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08); --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12); --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16); --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.25);
+            --accent-blue: #4299e1; --accent-purple: #9f7aea; --accent-pink: #ed64a6; --accent-green: #48bb78; --accent-yellow: #ecc94b; --accent-red: #f56565;
+        }
+        [data-theme="dark"] {
+            --primary-gradient: linear-gradient(135deg, #434bda 0%, #5a3d7a 100%);
+            --secondary-gradient: linear-gradient(135deg, #c4679b 0%, #c44557 100%);
+            --success-gradient: linear-gradient(135deg, #3a8bce 0%, #00c2d2 100%);
+            --bg-primary: #1a202c; --bg-secondary: #2d3748; --bg-tertiary: #4a5568; --bg-card: #2d3748; --bg-overlay: rgba(255, 255, 255, 0.05);
+            --text-primary: #f7fafc; --text-secondary: #e2e8f0; --text-tertiary: #cbd5e0; --text-inverse: #1a202c;
+            --border-color: #4a5568; --border-hover: #718096;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3); --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4); --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5); --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.7);
+        }
+        body { font-family: 'Cairo', 'IBM Plex Sans Arabic', 'Tajawal', sans-serif; background: var(--primary-gradient); min-height: 100vh; padding: 1rem; direction: rtl; position: relative; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.3) 0%, transparent 50%), radial-gradient(circle at 40% 20%, rgba(240, 147, 251, 0.2) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+        .app-container { max-width: 1400px; margin: 0 auto; background: var(--bg-card); border-radius: 24px; box-shadow: var(--shadow-xl); overflow: hidden; position: relative; z-index: 1; backdrop-filter: blur(20px); border: 1px solid var(--border-color); }
+        .header { background: var(--primary-gradient); color: var(--text-inverse); padding: 2.5rem 2rem; text-align: center; position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: headerPulse 15s infinite; }
+        @keyframes headerPulse { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(10%, 10%); } }
+        .header-content { position: relative; z-index: 1; }
+        .header h1 { font-family: 'Cairo', sans-serif; font-size: clamp(1.5rem, 4vw, 2.5rem); margin-bottom: 0.5rem; font-weight: 900; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); letter-spacing: -0.5px; }
+        .header p { font-size: clamp(0.9rem, 2vw, 1.1rem); opacity: 0.95; font-weight: 300; }
+        .controls-bar { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem; }
+        .theme-language-controls { display: flex; gap: 0.5rem; align-items: center; }
+        .icon-button { width: 45px; height: 45px; border: 2px solid var(--border-color); background: var(--bg-card); border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-sm); }
+        .icon-button:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-purple); }
+        .icon-button:active { transform: translateY(0); }
+        .icon-button.active { background: var(--primary-gradient); color: white; border-color: transparent; }
+        .main-content { padding: clamp(1.5rem, 3vw, 2.5rem); min-height: 500px; background: var(--bg-primary); }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); overflow-x: auto; padding-bottom: 0; scrollbar-width: thin; }
+        .tabs::-webkit-scrollbar { height: 4px; }
+        .tabs::-webkit-scrollbar-thumb { background: var(--accent-purple); border-radius: 2px; }
+        .tab { padding: 1rem clamp(1rem, 3vw, 2rem); background: none; border: none; color: var(--text-secondary); font-size: clamp(0.85rem, 2vw, 1rem); font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; position: relative; white-space: nowrap; font-family: 'Cairo', sans-serif; transition: all 0.3s ease; }
+        .tab::before { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--primary-gradient); transform: scaleX(0); transition: transform 0.3s ease; }
+        .tab:hover:not(:disabled) { color: var(--text-primary); }
+        .tab.active { color: var(--accent-purple); }
+        .tab.active::before { transform: scaleX(1); }
+        .tab:disabled { opacity: 0.4; cursor: not-allowed; }
+        .upload-zone { border: 3px dashed var(--border-color); border-radius: 20px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); background: var(--bg-secondary); margin-bottom: 2rem; position: relative; overflow: hidden; }
+        .upload-zone::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: var(--bg-overlay); border-radius: 50%; transform: translate(-50%, -50%); transition: all 0.6s ease; }
+        .upload-zone:hover { border-color: var(--accent-purple); background: var(--bg-overlay); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .upload-zone:hover::before { width: 300%; height: 300%; }
+        .upload-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.7; position: relative; z-index: 1; }
+        .upload-zone h3 { font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 700; position: relative; z-index: 1; }
+        .upload-zone p { color: var(--text-secondary); font-size: clamp(0.9rem, 2vw, 1rem); position: relative; z-index: 1; }
+        .btn { padding: 0.9rem 2rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: clamp(0.9rem, 2vw, 1rem); font-family: 'Cairo', sans-serif; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
+        .btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: rgba(255, 255, 255, 0.3); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.6s, height 0.6s; }
+        .btn:hover::before { width: 300px; height: 300px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--primary-gradient); color: white; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-success { background: var(--success-gradient); color: white; }
+        .preview-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 1rem; font-size: clamp(0.8rem, 2vw, 0.95rem); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); }
+        .preview-table thead { background: var(--primary-gradient); color: white; }
+        .preview-table th { padding: 1rem; text-align: right; font-weight: 700; font-size: clamp(0.85rem, 2vw, 1rem); }
+        .preview-table tbody tr { background: var(--bg-card); transition: all 0.3s ease; }
+        .preview-table tbody tr:nth-child(even) { background: var(--bg-secondary); }
+        .preview-table tbody tr:hover { background: var(--bg-overlay); transform: scale(1.01); box-shadow: var(--shadow-sm); }
+        .preview-table td { padding: 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; }
+        .config-panel { background: var(--bg-secondary); padding: 2rem; border-radius: 20px; box-shadow: var(--shadow-md); }
+        .config-panel h3 { color: var(--text-primary); margin-bottom: 1.5rem; font-size: clamp(1.1rem, 3vw, 1.3rem); font-weight: 700; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+        .config-item { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        .config-item:nth-child(1) { animation-delay: 0.05s; } .config-item:nth-child(2) { animation-delay: 0.1s; } .config-item:nth-child(3) { animation-delay: 0.15s; }
+        .config-item label { display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); font-size: 0.95rem; }
+        .config-item input { width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 10px; font-size: 1rem; font-family: 'Cairo', sans-serif; background: var(--bg-card); color: var(--text-primary); transition: all 0.3s ease; }
+        .config-item input:focus { outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.1); }
+        .error-msg, .success-msg { padding: 1.2rem; border-radius: 12px; margin-bottom: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; animation: slideInDown 0.4s ease; box-shadow: var(--shadow-sm); }
+        @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .error-msg { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; border-left: 4px solid #ef4444; }
+        .success-msg { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border-left: 4px solid #10b981; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .stat-card { background: var(--bg-card); padding: 1.5rem; border-radius: 16px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .stat-card h4 { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card .value { font-size: 2rem; font-weight: 900; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .table-container { overflow-x: auto; border-radius: 12px; margin-top: 1rem; box-shadow: var(--shadow-md); }
+        .button-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .section-header h3 { font-size: clamp(1.2rem, 3vw, 1.5rem); color: var(--text-primary); font-weight: 700; }
+        .info-box { background: var(--bg-overlay); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--accent-blue); margin: 1rem 0; color: var(--text-secondary); }
+        @media (max-width: 768px) { body { padding: 0.5rem; } .header { padding: 1.5rem 1rem; } .controls-bar { padding: 1rem; justify-content: center; } .main-content { padding: 1.5rem; } .tabs { gap: 0.25rem; } .tab { padding: 0.75rem 1rem; font-size: 0.85rem; } .config-grid { grid-template-columns: 1fr; } .button-group { flex-direction: column; } .btn { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const fetchFont = async (url) => {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(blob);
+            });
+        };
+
+        const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, ' ');
+
+        const parseSmartNumber = (val) => {
+            if (!val) return 0;
+            let str = String(val).trim();
+            str = str.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/,/g, '.');
+            return parseFloat(str) || 0;
+        };
+
+        const findColumn = (row, keywords) => {
+            const keys = Object.keys(row);
+            for (let key of keys) if (keywords.includes(key.trim())) return row[key];
+            for (let key of keys) {
+                for (let kw of keywords) if (key.includes(kw)) return row[key];
+            }
+            return null;
+        };
+
+        // دالة تصحيح النص العربي مع إصلاح المسافات (تم تعديل المسافات لتكون واضحة)
+        const fixArabic = (str) => {
+            if (!str) return "";
+            const s = String(str);
+            if (/[\u0600-\u06FF]/.test(s)) {
+                // استخدام مسافتين لضمان ظهور الفراغ بشكل صحيح
+                return s.split(' ').reverse().join('  ');
+            }
+            return s;
+        };
+
+        class Distributor {
+            constructor(students, capacities) {
+                this.students = students;
+                this.capacities = capacities;
+                this.results = [];
+                this.stats = {};
+            }
+
+            distribute() {
+                const channels = ['مركزي', 'ذوي الشهداء', 'موازي'];
+                const allResults = [];
+
+                channels.forEach(channel => {
+                    let currentSeats = { ...this.capacities };
+                    let acceptedInChannel = {};
+                    Object.keys(this.capacities).forEach(d => acceptedInChannel[d] = []);
+
+                    const channelStudents = this.students.filter(s => s.channel === channel);
+
+                    const regular = channelStudents.filter(s => !s.isProfessorChild);
+                    regular.sort((a, b) => b.average - a.average);
+
+                    regular.forEach(student => {
+                        this.assign(student, currentSeats, acceptedInChannel, false);
+                        allResults.push(student);
+                    });
+
+                    const profs = channelStudents.filter(s => s.isProfessorChild);
+                    profs.sort((a, b) => b.average - a.average);
+
+                    profs.forEach(student => {
+                        this.assign(student, currentSeats, acceptedInChannel, true);
+                        allResults.push(student);
+                    });
+                });
+
+                this.results = allResults;
+                this.calcStats();
+                return allResults;
+            }
+
+            assign(student, seats, acceptedList, isProfChild) {
+                let assigned = false;
+                for (let i = 0; i < student.preferences.length; i++) {
+                    const dept = student.preferences[i];
+                    const deptAccepted = acceptedList[dept] || [];
+                    
+                    if (seats[dept] > 0) {
+                        this.finalizeAssign(student, dept, i+1, 'قبول اعتيادي', seats, acceptedList);
+                        assigned = true;
+                        break;
+                    }
+
+                    if (isProfChild && deptAccepted.length > 0) {
+                        const minAvg = Math.min(...deptAccepted.map(s => s.average));
+                        if (student.average >= (minAvg - 5)) {
+                            this.finalizeAssign(student, dept, i+1, 'استثناء (ابن أستاذ)', seats, acceptedList);
+                            assigned = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!assigned) {
+                    student.assignedDepartment = 'غير موزع';
+                    student.preferenceRank = null;
+                    student.status = 'مرفوض';
+                }
+            }
+
+            finalizeAssign(student, dept, rank, status, seats, acceptedList) {
+                student.assignedDepartment = dept;
+                student.preferenceRank = rank;
+                student.status = status;
+                if (seats[dept] > 0) seats[dept]--;
+                if (!acceptedList[dept]) acceptedList[dept] = [];
+                acceptedList[dept].push(student);
+            }
+
+            calcStats() {
+                const depts = Object.keys(this.capacities);
+                depts.forEach(dept => {
+                    const students = this.results.filter(s => s.assignedDepartment === dept);
+                    this.stats[dept] = {
+                        total: students.length,
+                        maxAvg: students.length ? Math.max(...students.map(s => s.average)).toFixed(2) : '-',
+                        minAvg: students.length ? Math.min(...students.map(s => s.average)).toFixed(2) : '-',
+                        profChildren: students.filter(s => s.isProfessorChild).length
+                    };
+                });
+            }
+        }
+
+        const translations = {
+            ar: {
+                title: '🎓 نظام التوزيع الذكي للطلبة',
+                subtitle: 'نظام متقدم لتوزيع الطلبة على الأقسام بذكاء وعدالة',
+                uploadTab: '1. رفع الملف',
+                previewTab: '2. معاينة البيانات',
+                configTab: '3. الإعدادات',
+                resultsTab: '4. النتائج',
+                uploadTitle: '📂 اضغط لرفع ملف Excel',
+                uploadDesc: 'تأكد من وجود أعمدة: الاسم، المعدل، القناة (أو نوع القبول)',
+                previewTitle: '🔍 تحقق من البيانات المستوردة',
+                previewDesc: 'تحقق من صحة القناة والمعلومات قبل المتابعة',
+                configTitle: 'تحديد السعة لكل قسم',
+                resultsTitle: '📊 النتائج النهائية',
+                name: 'الاسم',
+                average: 'المعدل',
+                channel: 'القناة',
+                originalValue: 'القيمة الأصلية',
+                profChild: 'ابن أستاذ',
+                department: 'القسم',
+                accepted: 'المقبولين',
+                minAverage: 'أدنى معدل',
+                profChildren: 'أبناء أساتذة',
+                continueBtn: 'البيانات صحيحة - متابعة',
+                startDistribution: '🚀 بدء التوزيع',
+                equalDistribution: '⚖️ توزيع متساوي',
+                downloadExcel: '📥 تحميل النتائج Excel',
+                studentsRead: 'تم قراءة {count} طالب بنجاح',
+                distributionSuccess: 'تم التوزيع بنجاح!',
+                capacityError: 'يرجى تحديد السعة أولاً!',
+            },
+            en: {
+                title: '🎓 Smart Student Distribution System',
+                subtitle: 'Advanced system for intelligent and fair student distribution',
+                uploadTab: '1. Upload File',
+                previewTab: '2. Preview Data',
+                configTab: '3. Settings',
+                resultsTab: '4. Results',
+                uploadTitle: '📂 Click to Upload Excel File',
+                uploadDesc: 'Make sure the file contains: Name, Average, Channel columns',
+                previewTitle: '🔍 Verify Imported Data',
+                previewDesc: 'Check the accuracy of channels and information before proceeding',
+                configTitle: 'Set Capacity for Each Department',
+                resultsTitle: '📊 Final Results',
+                name: 'Name',
+                average: 'Average',
+                channel: 'Channel',
+                originalValue: 'Original Value',
+                profChild: 'Professor Child',
+                department: 'Department',
+                accepted: 'Accepted',
+                minAverage: 'Min Average',
+                profChildren: 'Professor Children',
+                continueBtn: 'Data is Correct - Continue',
+                startDistribution: '🚀 Start Distribution',
+                equalDistribution: '⚖️ Equal Distribution',
+                downloadExcel: '📥 Download Results Excel',
+                studentsRead: '{count} students read successfully',
+                distributionSuccess: 'Distribution completed successfully!',
+                capacityError: 'Please set capacity first!',
+                loadingFonts: 'Loading Arabic fonts... Please wait',
+                fontsLoaded: 'Fonts loaded successfully',
+            }
+        };
+
+        function App() {
+            const [theme, setTheme] = useState('light');
+            const [language, setLanguage] = useState('ar');
+            const [tab, setTab] = useState('upload');
+            const [students, setStudents] = useState([]);
+            const [depts, setDepts] = useState([]);
+            const [caps, setCaps] = useState({});
+            const [results, setResults] = useState(null);
+            const [msg, setMsg] = useState({type: '', text: ''});
+            const [fontsReady, setFontsReady] = useState(false);
+            const fileRef = useRef();
+
+            const t = translations[language];
+
+            useEffect(() => {
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('lang', language);
+                document.documentElement.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+            }, [theme, language]);
+
+            useEffect(() => {
+                const loadArabicFonts = async () => {
+                    try {
+                        const regularUrl = "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
+                        const boldUrl = "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Bold.ttf";
+
+                        const [regular, bold] = await Promise.all([
+                            fetchFont(regularUrl),
+                            fetchFont(boldUrl)
+                        ]);
+
+                        const vfs = {
+                            "Tajawal-Regular.ttf": regular,
+                            "Tajawal-Bold.ttf": bold
+                        };
+
+                        if (pdfMake.vfs) {
+                            Object.assign(pdfMake.vfs, vfs);
+                        } else {
+                            pdfMake.vfs = vfs;
+                        }
+
+                        pdfMake.fonts = {
+                            Tajawal: {
+                                normal: 'Tajawal-Regular.ttf',
+                                bold: 'Tajawal-Bold.ttf',
+                                italics: 'Tajawal-Regular.ttf',
+                                bolditalics: 'Tajawal-Bold.ttf'
+                            },
+                            Roboto: {
+                                normal: 'Tajawal-Regular.ttf', 
+                                bold: 'Tajawal-Bold.ttf',
+                                italics: 'Tajawal-Regular.ttf',
+                                bolditalics: 'Tajawal-Bold.ttf'
+                            }
+                        };
+
+                        setFontsReady(true);
+                    } catch (e) {
+                        console.error("Error loading fonts:", e);
+                        setMsg({type: 'error', text: 'فشل تحميل الخطوط العربية.'});
+                    }
+                };
+
+                loadArabicFonts();
+            }, []);
+
+            const toggleTheme = () => {
+                setTheme(prev => prev === 'light' ? 'dark' : 'light');
+            };
+
+            const toggleLanguage = () => {
+                setLanguage(prev => prev === 'ar' ? 'en' : 'ar');
+            };
+
+            const handleFile = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const wb = XLSX.read(evt.target.result, { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(ws);
+
+                        const parsed = data.map((row, idx) => {
+                            const name = findColumn(row, ['اسم', 'الاسم', 'Name']) || 'غير معروف';
+                            const avg = parseSmartNumber(findColumn(row, ['معدل', 'المعدل', 'Average']));
+                            
+                            const channelRaw = findColumn(row, ['قناة', 'القناة', 'Channel', 'القبول', 'نوع القبول', 'فئة']) || 'مركزي';
+                            let channel = 'مركزي';
+                            const chStr = String(channelRaw);
+                            if (chStr.includes('شهداء') || chStr.includes('ذوي')) channel = 'ذوي الشهداء';
+                            else if (chStr.includes('موازي')) channel = 'موازي';
+
+                            const notes = String(findColumn(row, ['ملاحظات', 'ملاحظة']) || '');
+                            const isProf = notes.includes('استاذ') || notes.includes('أستاذ') || notes.includes('أساتذة');
+
+                            const prefs = [];
+                            ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'].forEach((ord, i) => {
+                                const val = findColumn(row, [`الاختيار ${ord}`, `الرغبة ${ord}`, `${i+1}`]);
+                                if (val) prefs.push(cleanStr(val));
+                            });
+
+                            return {
+                                id: idx + 1, name, average: avg, channel, isProfessorChild: isProf, 
+                                preferences: prefs, rawChannel: channelRaw
+                            };
+                        });
+
+                        if (parsed.length === 0) throw new Error("الملف فارغ!");
+                        setStudents(parsed);
+                        
+                        const dSet = new Set();
+                        parsed.forEach(s => s.preferences.forEach(p => dSet.add(p)));
+                        
+                        const priorityDepts = ['علوم الحاسوب', 'تكنولوجيا المعلومات', 'الامن السيبراني'];
+                        const dList = [];
+                        
+                        priorityDepts.forEach(dept => {
+                            if (dSet.has(dept)) {
+                                dList.push(dept);
+                                dSet.delete(dept);
+                            }
+                        });
+                        
+                        const remainingDepts = Array.from(dSet).sort();
+                        dList.push(...remainingDepts);
+                        
+                        setDepts(dList);
+                        
+                        const initCaps = {};
+                        dList.forEach(d => initCaps[d] = 0);
+                        setCaps(initCaps);
+
+                        setMsg({type: 'success', text: t.studentsRead.replace('{count}', parsed.length)});
+                        setTab('preview');
+
+                    } catch (err) {
+                        setMsg({type: 'error', text: 'خطأ: ' + err.message});
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            const runDistribute = (mode) => {
+                let finalCaps = { ...caps };
+                if (mode === 'equal') {
+                    const share = Math.ceil(students.length / depts.length);
+                    depts.forEach(d => finalCaps[d] = share);
+                } else {
+                    if (Object.values(caps).reduce((a,b)=>a+b,0) === 0) {
+                        setMsg({type: 'error', text: t.capacityError});
+                        return;
+                    }
+                }
+
+                const dist = new Distributor(JSON.parse(JSON.stringify(students)), finalCaps);
+                const res = dist.distribute();
+                setResults({ students: res, stats: dist.stats });
+                setTab('results');
+                setMsg({type: 'success', text: t.distributionSuccess});
+            };
+
+            const downloadExcel = () => {
+                const data = results.students.map(s => {
+                    let r = {
+                        'ت': s.id, 'الاسم': s.name, 'المعدل': s.average, 'القناة': s.channel,
+                        'ابن استاذ': s.isProfessorChild ? 'نعم' : 'لا'
+                    };
+                    s.preferences.forEach((p, i) => r[`الخيار ${i+1}`] = p);
+                    r['القسم المقبول'] = s.assignedDepartment;
+                    return r;
+                });
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "النتائج");
+                XLSX.writeFile(wb, "نتائج_التوزيع.xlsx");
+            };
+
+            // === دالة تحميل Excel لكل قسم (تمت إعادتها وإصلاحها) ===
+            const downloadDepartmentExcel = (deptName) => {
+                try {
+                    const deptStudents = results.students.filter(s => s.assignedDepartment === deptName);
+                    const data = deptStudents.map(s => {
+                        let r = {
+                            'ت': s.id, 'الاسم': s.name, 'المعدل': s.average, 'القناة': s.channel,
+                            'ابن استاذ': s.isProfessorChild ? 'نعم' : 'لا'
+                        };
+                        s.preferences.forEach((p, i) => r[`الخيار ${i+1}`] = p);
+                        r['القسم المقبول'] = s.assignedDepartment;
+                        return r;
+                    });
+                    
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    
+                    // تنظيف اسم القسم ليناسب Excel
+                    const safeSheetName = deptName.replace(/[\\/?*[\]]/g, "").substring(0, 30) || "Sheet1";
+                    
+                    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+                    XLSX.writeFile(wb, `${deptName}_المقبولين.xlsx`);
+                } catch (error) {
+                    console.error(error);
+                    alert("حدث خطأ أثناء تحميل الملف: " + error.message);
+                }
+            };
+
+            const downloadDepartmentPDF = (deptName) => {
+                if (!fontsReady) {
+                    alert(t.loadingFonts);
+                    return;
+                }
+
+                const deptStudents = results.students
+                    .filter(s => s.assignedDepartment === deptName)
+                    .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+                
+                const tableBody = [
+                    [
+                        { text: fixArabic('قناة القبول'), style: 'tableHeader', alignment: 'center' },
+                        { text: fixArabic('الاسم'), style: 'tableHeader', alignment: 'center' },
+                        { text: fixArabic('ت'), style: 'tableHeader', alignment: 'center' }
+                    ]
+                ];
+                
+                deptStudents.forEach((s, idx) => {
+                    tableBody.push([
+                        { text: fixArabic(s.channel), alignment: 'center', fontSize: 12 },
+                        { text: fixArabic(s.name), alignment: 'right', fontSize: 12 }, 
+                        { text: (idx + 1).toString(), alignment: 'center', fontSize: 12 }
+                    ]);
+                });
+                
+                const docDefinition = {
+                    pageSize: 'A4',
+                    pageOrientation: 'portrait',
+                    defaultStyle: {
+                        font: 'Tajawal',
+                        fontSize: 11
+                    },
+                    content: [
+                        { text: fixArabic('جامعة كربلاء'), style: 'header', alignment: 'center', margin: [0, 0, 0, 10] },
+                        { text: fixArabic('كلية علوم الحاسوب وتكنولوجيا المعلومات'), style: 'subheader', alignment: 'center', margin: [0, 0, 0, 10] },
+                        { text: fixArabic(`قسم ${deptName}`), style: 'department', alignment: 'center', margin: [0, 0, 0, 20] },
+                        {
+                            table: {
+                                headerRows: 1,
+                                widths: ['30%', '60%', '10%'],
+                                body: tableBody
+                            },
+                            layout: {
+                                fillColor: function (rowIndex) {
+                                    return (rowIndex === 0) ? '#667eea' : (rowIndex % 2 === 0) ? '#f5f5f5' : null;
+                                },
+                                hLineWidth: function () { return 1; },
+                                vLineWidth: function () { return 1; },
+                                hLineColor: function () { return '#ddd'; },
+                                vLineColor: function () { return '#ddd'; },
+                                paddingLeft: function(i) { return 8; },
+                                paddingRight: function(i) { return 8; },
+                                paddingTop: function(i) { return 8; },
+                                paddingBottom: function(i) { return 8; }
+                            }
+                        }
+                    ],
+                    styles: {
+                        header: { fontSize: 18, bold: true, color: '#667eea' },
+                        subheader: { fontSize: 14, bold: true, color: '#764ba2' },
+                        department: { fontSize: 13, bold: true, color: '#2d3748' },
+                        tableHeader: { bold: true, fontSize: 13, color: 'white', fillColor: '#667eea' }
+                    }
+                };
+                
+                pdfMake.createPdf(docDefinition).download(`${deptName}_المقبولين.pdf`);
+            };
+
+            const downloadFinalPDF = () => {
+                if (!fontsReady) {
+                    alert(t.loadingFonts);
+                    return;
+                }
+
+                const priorityDepts = ['علوم الحاسوب', 'تكنولوجيا المعلومات', 'الامن السيبراني'];
+                const allDepts = Object.keys(results.stats);
+                const sortedDepts = [];
+                
+                priorityDepts.forEach(dept => {
+                    if (allDepts.includes(dept)) sortedDepts.push(dept);
+                });
+                allDepts.forEach(dept => {
+                    if (!priorityDepts.includes(dept)) sortedDepts.push(dept);
+                });
+                
+                const content = [
+                    { text: fixArabic('جامعة كربلاء'), style: 'mainHeader', alignment: 'center', margin: [0, 0, 0, 10] },
+                    { text: fixArabic('كلية علوم الحاسوب وتكنولوجيا المعلومات'), style: 'mainSubheader', alignment: 'center', margin: [0, 0, 0, 10] },
+                    { text: fixArabic('النتيجة النهائية - جميع الأقسام'), style: 'mainTitle', alignment: 'center', margin: [0, 0, 0, 30] }
+                ];
+                
+                sortedDepts.forEach((deptName, index) => {
+                    if (index > 0) {
+                        content.push({ text: '', pageBreak: 'before' });
+                        content.push({ text: fixArabic('جامعة كربلاء'), style: 'header', alignment: 'center', margin: [0, 0, 0, 5] });
+                        content.push({ text: fixArabic('كلية علوم الحاسوب وتكنولوجيا المعلومات'), style: 'subheader', alignment: 'center', margin: [0, 0, 0, 15] });
+                    }
+                    
+                    const deptStudents = results.students
+                        .filter(s => s.assignedDepartment === deptName)
+                        .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+                    
+                    content.push({ text: fixArabic(`قسم ${deptName}`), style: 'department', alignment: 'center', margin: [0, 0, 0, 15] });
+                    
+                    const tableBody = [
+                        [
+                            { text: fixArabic('قناة القبول'), style: 'tableHeader', alignment: 'center' },
+                            { text: fixArabic('الاسم'), style: 'tableHeader', alignment: 'center' },
+                            { text: fixArabic('ت'), style: 'tableHeader', alignment: 'center' }
+                        ]
+                    ];
+                    
+                    deptStudents.forEach((s, idx) => {
+                        tableBody.push([
+                            { text: fixArabic(s.channel), alignment: 'center', fontSize: 12 },
+                            { text: fixArabic(s.name), alignment: 'right', fontSize: 12 },
+                            { text: (idx + 1).toString(), alignment: 'center', fontSize: 12 }
+                        ]);
+                    });
+                    
+                    content.push({
+                        table: {
+                            headerRows: 1,
+                            widths: ['30%', '60%', '10%'],
+                            body: tableBody
+                        },
+                        layout: {
+                            fillColor: function (rowIndex) {
+                                return (rowIndex === 0) ? '#667eea' : (rowIndex % 2 === 0) ? '#f5f5f5' : null;
+                            },
+                            hLineWidth: function () { return 1; },
+                            vLineWidth: function () { return 1; },
+                            hLineColor: function () { return '#ddd'; },
+                            vLineColor: function () { return '#ddd'; },
+                            paddingLeft: function(i) { return 8; },
+                            paddingRight: function(i) { return 8; },
+                            paddingTop: function(i) { return 8; },
+                            paddingBottom: function(i) { return 8; }
+                        },
+                        margin: [0, 0, 0, 20]
+                    });
+                });
+                
+                const docDefinition = {
+                    pageSize: 'A4',
+                    pageOrientation: 'portrait',
+                    defaultStyle: {
+                        font: 'Tajawal',
+                        fontSize: 10
+                    },
+                    content: content,
+                    styles: {
+                        mainHeader: { fontSize: 20, bold: true, color: '#667eea' },
+                        mainSubheader: { fontSize: 16, bold: true, color: '#764ba2' },
+                        mainTitle: { fontSize: 14, bold: true, color: '#2d3748' },
+                        header: { fontSize: 16, bold: true, color: '#667eea' },
+                        subheader: { fontSize: 13, bold: true, color: '#764ba2' },
+                        department: { fontSize: 13, bold: true, color: '#2d3748' },
+                        tableHeader: { bold: true, fontSize: 13, color: 'white', fillColor: '#667eea' }
+                    }
+                };
+                
+                pdfMake.createPdf(docDefinition).download('النتيجة_النهائية_جميع_الأقسام.pdf');
+            };
+
+            return (
+                <div className="app-container">
+                    <div className="header">
+                        <div className="header-content">
+                            <h1>{t.title}</h1>
+                            <p>{t.subtitle}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="controls-bar">
+                        <div className="theme-language-controls">
+                            <button 
+                                className={`icon-button ${theme === 'dark' ? 'active' : ''}`}
+                                onClick={toggleTheme}
+                                title={theme === 'light' ? 'الوضع الليلي' : 'الوضع النهاري'}
+                            >
+                                {theme === 'light' ? '🌙' : '☀️'}
+                            </button>
+                            <button 
+                                className={`icon-button ${language === 'en' ? 'active' : ''}`}
+                                onClick={toggleLanguage}
+                                title={language === 'ar' ? 'English' : 'العربية'}
+                            >
+                                {language === 'ar' ? '🇬🇧' : '🇮🇶'}
+                            </button>
+                        </div>
+                        
+                    </div>
+                    
+                    <div className="main-content">
+                        {msg.text && (
+                            <div className={msg.type === 'error' ? 'error-msg' : 'success-msg'}>
+                                <span>{msg.type === 'error' ? '⚠️' : '✅'}</span>
+                                <span>{msg.text}</span>
+                            </div>
+                        )}
+
+                        <div className="tabs">
+                            <button className={`tab ${tab==='upload'?'active':''}`} onClick={()=>setTab('upload')}>
+                                {t.uploadTab}
+                            </button>
+                            <button className={`tab ${tab==='preview'?'active':''}`} disabled={!students.length} onClick={()=>setTab('preview')}>
+                                {t.previewTab}
+                            </button>
+                            <button className={`tab ${tab==='config'?'active':''}`} disabled={!students.length} onClick={()=>setTab('config')}>
+                                {t.configTab}
+                            </button>
+                            <button className={`tab ${tab==='results'?'active':''}`} disabled={!results} onClick={()=>setTab('results')}>
+                                {t.resultsTab}
+                            </button>
+                        </div>
+
+                        {tab === 'upload' && (
+                            <div className="upload-zone" onClick={()=>fileRef.current.click()}>
+                                <div className="upload-icon">📂</div>
+                                <h3>{t.uploadTitle}</h3>
+                                <p>{t.uploadDesc}</p>
+                                <input type="file" ref={fileRef} hidden onChange={handleFile} accept=".xlsx,.xls" />
+                            </div>
+                        )}
+
+                        {tab === 'preview' && (
+                            <div>
+                                <div className="section-header">
+                                    <h3>{t.previewTitle}</h3>
+                                </div>
+                                <div className="info-box">
+                                    {t.previewDesc}
+                                </div>
+                                <div className="table-container">
+                                    <table className="preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>{t.name}</th>
+                                                <th>{t.average}</th>
+                                                <th>{t.channel}</th>
+                                                <th>{t.originalValue}</th>
+                                                <th>{t.profChild}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {students.slice(0, 20).map(s => (
+                                                <tr key={s.id}>
+                                                    <td>{s.name}</td>
+                                                    <td><strong>{s.average}</strong></td>
+                                                    <td>
+                                                        <span className="badge" style={{
+                                                            background: s.channel === 'مركزي' ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' : 
+                                                                       s.channel === 'موازي' ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' : 
+                                                                       'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                                                            color: 'white'
+                                                        }}>{s.channel}</span>
+                                                    </td>
+                                                    <td style={{color:'var(--text-secondary)'}}>{s.rawChannel}</td>
+                                                    <td>{s.isProfessorChild ? '✅' : '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="button-group">
+                                    <button className="btn btn-primary" onClick={()=>setTab('config')}>
+                                        {t.continueBtn}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'config' && (
+                            <div className="config-panel">
+                                <h3>{t.configTitle}</h3>
+                                <div className="config-grid">
+                                    {depts.map((d, idx) => (
+                                        <div key={d} className="config-item" style={{transform: 'translateY(20px)'}}>
+                                            <label>{d}</label>
+                                            <input 
+                                                type="number" 
+                                                value={caps[d]} 
+                                                onChange={e => setCaps({...caps, [d]: parseInt(e.target.value)||0})} 
+                                                min="0"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="button-group">
+                                    <button className="btn btn-primary" onClick={()=>runDistribute('manual')}>
+                                        {t.startDistribution}
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={()=>runDistribute('equal')}>
+                                        {t.equalDistribution}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'results' && results && (
+                            <div>
+                                <div className="section-header">
+                                    <h3>{t.resultsTitle}</h3>
+                                </div>
+                                
+                                <div className="stats-grid">
+                                    <div className="stat-card">
+                                        <h4>{language === 'ar' ? 'إجمالي الطلبة' : 'Total Students'}</h4>
+                                        <div className="value">{students.length}</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <h4>{language === 'ar' ? 'الأقسام' : 'Departments'}</h4>
+                                        <div className="value">{depts.length}</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <h4>{language === 'ar' ? 'المقبولين' : 'Accepted'}</h4>
+                                        <div className="value">
+                                            {Object.values(results.stats).reduce((acc, s) => acc + s.total, 0)}
+                                        </div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <h4>{language === 'ar' ? 'أبناء الأساتذة' : 'Professor Children'}</h4>
+                                        <div className="value">
+                                            {Object.values(results.stats).reduce((acc, s) => acc + s.profChildren, 0)}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="table-container">
+                                    <table className="preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>{t.department}</th>
+                                                <th>{t.accepted}</th>
+                                                <th>{language === 'ar' ? 'أعلى معدل' : 'Max Average'}</th>
+                                                <th>{t.minAverage}</th>
+                                                <th>{t.profChildren}</th>
+                                                <th>{language === 'ar' ? 'تحميل Excel' : 'Download Excel'}</th>
+                                                <th>{language === 'ar' ? 'تحميل PDF' : 'Download PDF'}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const priorityDepts = ['علوم الحاسوب', 'تكنولوجيا المعلومات', 'الامن السيبراني'];
+                                                const entries = Object.entries(results.stats);
+                                                const sortedEntries = [];
+                                                
+                                                priorityDepts.forEach(dept => {
+                                                    const entry = entries.find(([d]) => d === dept);
+                                                    if (entry) sortedEntries.push(entry);
+                                                });
+                                                
+                                                entries.forEach(entry => {
+                                                    if (!priorityDepts.includes(entry[0])) {
+                                                        sortedEntries.push(entry);
+                                                    }
+                                                });
+                                                
+                                                return sortedEntries.map(([d, s]) => (
+                                                    <tr key={d}>
+                                                        <td><strong>{d}</strong></td>
+                                                        <td>{s.total}</td>
+                                                        <td><span style={{color: 'var(--accent-green)', fontWeight: 'bold'}}>{s.maxAvg}</span></td>
+                                                        <td><span style={{color: 'var(--accent-red)', fontWeight: 'bold'}}>{s.minAvg}</span></td>
+                                                        <td>{s.profChildren}</td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn-icon" 
+                                                                onClick={() => downloadDepartmentExcel(d)}
+                                                                style={{background: 'var(--success-gradient)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', boxShadow: 'var(--shadow-sm)'}}
+                                                                title="تحميل Excel"
+                                                            >
+                                                                📊
+                                                            </button>
+                                                        </td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn-icon" 
+                                                                onClick={() => downloadDepartmentPDF(d)}
+                                                                disabled={!fontsReady}
+                                                                style={{background: fontsReady ? 'var(--secondary-gradient)' : 'gray', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', boxShadow: 'var(--shadow-sm)'}}
+                                                                title="تحميل PDF"
+                                                            >
+                                                                📄
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div className="button-group">
+                                    <button className="btn btn-success" onClick={downloadExcel}>
+                                        📊 {t.downloadExcel}
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={downloadFinalPDF} disabled={!fontsReady} style={{
+                                        background: fontsReady ? 'var(--secondary-gradient)' : 'gray',
+                                        color: 'white'
+                                    }}>
+                                        📄 {language === 'ar' ? 'تحميل النتيجة النهائية PDF' : 'Download Final PDF'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
